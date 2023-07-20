@@ -1,7 +1,9 @@
-import com.delta.GameBoard
-import com.delta.Tilous
+import com.delta.server.Server
+import kotlinx.coroutines.runBlocking
 
-fun main(args: Array<String>) {
-    val testGame = Tilous(GameBoard(5))
-    println(testGame.getBoardSize())
+fun main() {
+    val server = Server()
+    runBlocking {
+        server.start()
+    }
 }
