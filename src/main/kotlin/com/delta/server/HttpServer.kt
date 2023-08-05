@@ -1,7 +1,7 @@
 package com.delta.server
 
-import com.delta.Tilous
 import com.delta.PlayerID
+import com.delta.Tilous
 import com.google.gson.Gson
 import io.ktor.http.*
 import io.ktor.serialization.gson.*
@@ -29,8 +29,6 @@ import kotlin.random.Random
  * @property [players] Список игроков, которые пожелали присоединиться к игре.
  */
 internal class HttpServer(
-
-
     private val game: Tilous,
     private val broadcast: KSuspendFunction1<String, Unit>
 ) {
