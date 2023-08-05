@@ -11,10 +11,10 @@ import kotlinx.coroutines.launch
  * Всё, что он делает, это создаёт [игру][Tilous] и запускает два сервера параллельно, используя [coroutineScope].
  */
 class Server {
-    val gameLogic : Tilous = Tilous(GameBoard(15))
+    val game : Tilous = Tilous(GameBoard(15))
 
     private val webSocketServer = WebSocketServer()
-    private val httpServer = HttpServer(gameLogic, webSocketServer::broadcast)
+    private val httpServer = HttpServer(game, webSocketServer::broadcast)
 
     suspend fun start() {
         println("My ip address is ${getIpAddress()}")
