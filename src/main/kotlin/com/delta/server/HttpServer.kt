@@ -44,7 +44,9 @@ internal class HttpServer(
     /**
      * Рассылает всем игрокам текущее состояние игры в формате json.
      */
-    private suspend fun broadcastGameState(): Unit = TODO()
+    private suspend fun broadcastGameState(): Unit {
+        broadcast(Gson().toJson(game))
+    }
 
     private suspend fun respondOk(call: ApplicationCall) {
         broadcastGameState()
