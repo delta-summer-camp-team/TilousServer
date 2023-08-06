@@ -105,14 +105,41 @@ internal class HttpServer(
      * устанавливает [gameStarted] в `true`, распределяет очерёдность ходов и рассылает всем
      * игрокам текущее состояние игры.
      */
-    private suspend fun tryToStartGame(): Unit = TODO()
+    private suspend fun tryToStartGame() : Unit {
+        // Check if there are enough players to start the game
+        if (players.size < 4) {
+            return  // Not enough players, so exit the function early
+        }
+
+        // If there are exactly 4 players, assign PlayerIDs and start the game
+        if (players.size == 4) {
+
+            gameStarted = true // Start the game
+
+        }
+    }
 
     /**
      * Распределяет [PlayerID] между игроками случайным образом.
      * Внимание, эта функция инициализирует [assignedIds], поэтому она должна вызываться только один раз --
      * в [tryToStartGame].
      */
-    private fun assignPlayerIds(): Map<Player, PlayerID> = TODO()
+    fun assignPlayerIds(): Map<Player, PlayerID> {
+        // Shuffle the players list for randomness
+        val shuffledPlayers = players.shuffled()
+
+        // Create a mutable map to hold the associations
+        val playerIdMap = mutableMapOf<Player, PlayerID>()
+
+        // Assign PlayerID to each player based on their position in the shuffled list
+        shuffledPlayers.forEachIndexed { index, player ->
+            val playerId = PlayerID.values()[index]
+            playerIdMap[player] = playerId
+        }
+
+        // Return the created map
+        return playerIdMap.toMap()
+    }
 
 
     /**
@@ -230,9 +257,40 @@ internal class HttpServer(
              * Используется для того, чтобы игрок мог узнать очерёдность своего хода
              */
             get("/playerID") {
+                try {
+                    val player = validatePlayer(call.parameters)
+                    val playerID = assignedIds[player]
+                        ?: throw Exception("PlayerID not found for this player.")
+                    call.respond(HttpStatusCode.OK, playerID)
+                } catch(e: Exception){
+                    respondException(call,e)
+                }
             }
 
             get("/getWinner") {
+                try {
+                    // Retrieve the winner's PlayerID
+                    val winnerPlayerID = game.getWinner()  // Assuming this returns PlayerID
+
+                    // If no winner was found, return an appropriate message
+                    if (winnerPlayerID == null) {
+                        call.respond(HttpStatusCode.OK, "The game ended in a draw.")
+                        return@get
+                    }
+
+                    // Find the player associated with the winnerPlayerID
+                    val winnerPlayer = assignedIds.entries.find { (_, value) -> value == winnerPlayerID }?.key
+
+                    // If the player is not found, return an error (this should be a rare occurrence)
+                    if (winnerPlayer == null) {
+                        throw Exception("Player with winning PlayerID not found.")
+                    }
+
+                    // Respond with the winner's Player.id
+                    call.respond(HttpStatusCode.OK, winnerPlayer.id)
+                } catch (e: Exception) {
+                    respondException(call, e)
+                }
             }
         }
     }
