@@ -210,7 +210,29 @@ internal class HttpServer(
              * Возвращает BadRequest если что-то не получилось.
              */
             post("/placeCell") {
-
+                try {
+                    val player = validatePlayer(call.parameters)
+                    if (!gameStarted) {
+                        throw Exception("Игра еще не началась.")
+                    }
+                    if (player.id != assignedIds.entries.find { it.value == game.currentPlayer }?.key?.id)
+                        throw Exception("Теперь не твоя очередь")
+                    val row = call.parameters["row"]?.toIntOrNull()
+                        ?: throw IllegalArgumentException("Missing or invalid 'row'.")
+                    val col = call.parameters["col"]?.toIntOrNull()
+                        ?: throw IllegalArgumentException("Missing or invalid 'col'.")
+                    when (val result = game.placeCell(player.id, row, col)) {
+                        is placeCell.Success -> {
+                        game.currentPlayer = game.getNextPlayer()
+                        broadcastGameState()
+                        call.respond(HttpStatusCode.OK, "Cell placed successfully.")
+                    }
+                        is placeCell.Invalid -> call.respond(HttpStatusCode.BadRequest, "Invalid cell placement.")
+                        is placeCell.GameOver -> call.respond(HttpStatusCode.BadRequest, "Game is already over.")
+                    }
+                } catch (e: Exception) {
+                    respondException(call, e)
+                }
             }
 
             /**
