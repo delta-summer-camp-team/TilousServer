@@ -64,7 +64,23 @@ internal class HttpServer(
      * добавить его в [players] с помощью метода [addPlayer] и, наконец, вернуть его.
      * Если игра уже началась или игрок с таким id уже есть, выбросить исключение с соответствующим сообщением.
      */
-    private fun registerPlayer(id: String): Player = TODO()
+    private fun registerPlayer(id: String): Player {
+        // Проверьте, не началась ли игра
+        if (gameStarted == true) {
+            throw Exception("Игра уже началась!")
+        }
+
+        val existingPlayer = players.find { it.id == id }
+        if (existingPlayer != null) {
+            throw Exception("Игрок с ID $id уже зарегистрирован.")
+        }
+
+        if (!addPlayer(Player(id, generateRandomPassword()))) {
+            throw Exception("Не удалось добавить игрока '$id' в игру.")
+        }
+
+        return Player(id, generateRandomPassword())
+    }
 
     /**
      * Добавляет [player] в [players], если число игроков ещё не максимально.
