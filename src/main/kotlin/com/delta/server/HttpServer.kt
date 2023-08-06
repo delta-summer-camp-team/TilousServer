@@ -13,6 +13,9 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import java.util.*
 import kotlin.reflect.KSuspendFunction1
+import kotlin.random.Random
+
+
 
 /**
  * Этот класс ответсвеннен за обработку запросов игроков.
@@ -26,6 +29,8 @@ import kotlin.reflect.KSuspendFunction1
  * @property [players] Список игроков, которые пожелали присоединиться к игре.
  */
 internal class HttpServer(
+
+
     private val game: Tilous,
     private val broadcast: KSuspendFunction1<String, Unit>
 ) {
@@ -71,7 +76,7 @@ internal class HttpServer(
                 .map { allowedChars.random() }
                 .joinToString("")
         }
-        if (gameStarted == true) {
+        if (gameStarted) {
             throw Exception("Игра уже началась!")
         }
 
@@ -92,13 +97,30 @@ internal class HttpServer(
      * Добавляет [player] в [players], если число игроков ещё не максимально.
      * @return `true` если игрок успешно добавлен, `false` иначе.
      */
-    private fun addPlayer(player: Player): Boolean = TODO()
-
+    private fun addPlayer(player: Player): Boolean {
+        if (players.size < 4) {
+            players.add(player)
+            return true
+        }
+        return false
+    }
     /**
      * Убирает игрока из [players].
      * @return `true` если удалось это сделать, `false` иначе
      */
-    private fun logoutPlayer(id: String): Boolean = TODO()
+    private fun logoutPlayer(id: String, password: String): Boolean {
+        // Find the player with the given ID
+        val player = players.find { it.id == id }
+
+        // If no player was found, return false
+        if (player == null || player.pwd != password) {
+            return false
+        }
+
+        // Remove the player from the list and return true
+        players.remove(player)
+        return true
+    }
 
     /**
      * Пытается начать игру: если игра ещё не началась и число игроков достаточно, то
@@ -206,15 +228,27 @@ internal class HttpServer(
              */
             post("/login") {
                 try {
-                    // что-нибудь
-                } catch (e : Exception) {
-                    // что-нибудь
-                }
+                    // Validate the server password
+                    validateServersPassword(call.parameters)
 
-                //Thread.sleep(1000)
-                // Используйте эту строчку, чтобы подождать секунду перед тем как
-                // пытаться начать игру. Без неё могут начаться проблемы с синхронизацией.
+                    // Extract the "id" parameter
+                    val id = call.parameters["id"]
+                        ?: throw IllegalArgumentException("Missing 'id' parameter.")
+
+                    // Register a new player
+                    val player = registerPlayer(id)
+
+                    // Respond with the newly registered player and password
+                    call.respond(HttpStatusCode.OK, mapOf("player" to player, "password" to player.pwd))
+
+                    // Attempt to start the game
+                    tryToStartGame()
+                } catch (e: Exception) {
+                    respondException(call, e)
+                }
+                Thread.sleep(1000)
             }
+
 
             /**
              * Обрабатывает запрос на логин игрока.
@@ -225,9 +259,24 @@ internal class HttpServer(
              */
             post("/logout") {
                 try {
-                    // что-нибудь
-                } catch (e : Exception) {
-                    // что-нибудь
+                    // Extract the "id" and "password" parameters
+                    val id = call.parameters["id"]
+                        ?: throw IllegalArgumentException("Missing 'id' parameter.")
+                    val password = call.parameters["password"]
+                        ?: throw IllegalArgumentException("Missing 'password' parameter.")
+
+                    // Logout the player
+                    val success = logoutPlayer(id, password)
+
+                    // If the player was not found or password didn't match, return an error
+                    if (!success) {
+                        throw Exception("No player with this ID is registered or password is incorrect.")
+                    }
+
+                    // Respond with a success message
+                    call.respond(HttpStatusCode.OK, "Player logged out successfully.")
+                } catch (e: Exception) {
+                    respondException(call, e)
                 }
             }
 
