@@ -221,7 +221,7 @@ internal class HttpServer(
                     val player = registerPlayer(id)
 
                     // Respond with the newly registered player and password
-                    call.respond(HttpStatusCode.OK, mapOf("player" to player, "password" to player.pwd))
+                    call.respond(HttpStatusCode.OK, player)
 
                     // Attempt to start the game
                     tryToStartGame()
