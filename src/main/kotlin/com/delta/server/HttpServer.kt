@@ -65,7 +65,12 @@ internal class HttpServer(
      * Если игра уже началась или игрок с таким id уже есть, выбросить исключение с соответствующим сообщением.
      */
     private fun registerPlayer(id: String): Player {
-        // Проверьте, не началась ли игра
+        fun generateRandomPassword(length: Int = 8): String {
+            val allowedChars = ('A'..'Z') + ('a'..'z') + ('0'..'9')
+            return (1..length)
+                .map { allowedChars.random() }
+                .joinToString("")
+        }
         if (gameStarted == true) {
             throw Exception("Игра уже началась!")
         }
@@ -81,6 +86,7 @@ internal class HttpServer(
 
         return Player(id, generateRandomPassword())
     }
+
 
     /**
      * Добавляет [player] в [players], если число игроков ещё не максимально.
