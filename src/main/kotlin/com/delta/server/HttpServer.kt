@@ -217,10 +217,14 @@ internal class HttpServer(
                     }
                     if (player.id != assignedIds.entries.find { it.value == game.currentPlayer }?.key?.id)
                         throw Exception("Теперь не твоя очередь")
+
+
                     val row = call.parameters["row"]?.toIntOrNull()
                         ?: throw IllegalArgumentException("Missing or invalid 'row'.")
                     val col = call.parameters["col"]?.toIntOrNull()
                         ?: throw IllegalArgumentException("Missing or invalid 'col'.")
+
+
                     when (val result = game.placeCell(player.id, row, col)) {
                         is placeCell.Success -> {
                         game.currentPlayer = game.getNextPlayer()
