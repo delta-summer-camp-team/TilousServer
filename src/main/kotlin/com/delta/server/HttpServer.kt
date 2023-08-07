@@ -1,9 +1,10 @@
 package com.delta.server
-
-import com.delta.Tilous
+import com.google.gson.Gson
 import com.delta.PlayerID
+import com.delta.Tilous
 import com.google.gson.Gson
 import io.ktor.http.*
+import io.ktor.http.websocket.*
 import io.ktor.serialization.gson.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
@@ -29,8 +30,6 @@ import kotlin.random.Random
  * @property [players] Список игроков, которые пожелали присоединиться к игре.
  */
 internal class HttpServer(
-
-
     private val game: Tilous,
     private val broadcast: KSuspendFunction1<String, Unit>
 ) {
@@ -174,9 +173,26 @@ internal class HttpServer(
      * @param [checkForGameStart] Если установлен в `true`, но игра не началась, нужно выбросить исключение
      * с сообщением "Game is not started yet".
      */
-    private fun validatePlayer(parameters: Parameters, checkForGameStart: Boolean = true): Player {
-        TODO()
+    private fun validatePlayer(parameters: Parameters, players: List<Player>, checkForGameStart: Boolean = true): Player {
+        val playerIdToFind = parameters.getPlayerId()
+        val player = players.find { it.id == playerIdToFind }
+
+        if (player == null) {
+            throw IllegalArgumentException("No such player or credentials are wrong.")
+        }
+
+        if (checkForGameStart) {
+        }
+
+        return player
     }
+
+
+    private fun Parameters.getPlayerId(): String {
+        return ("id")
+    }
+
+
 
     /**
      * Эта функция проверяет есть ли в [parameters] параметр "server_pwd"
@@ -185,8 +201,18 @@ internal class HttpServer(
      * Пока можно придумать пароль прямо внутри этой функции.
      */
     private fun validateServersPassword(parameters: Parameters) {
-        TODO()
+        val serverPassword = "your_server_password"
+
+        val inputPassword = parameters.getServerPassword()
+
+        if (inputPassword != serverPassword) {
+            throw IllegalArgumentException("Invalid server password.")
+        }
     }
+    private fun Parameters.getServerPassword(): String {
+        return ("server_pwd")
+    }
+
 
     /**
      * Основная сущность сервера. Принимает запросы вида `server_address/do_something?parameters` и обрабатывает их.
