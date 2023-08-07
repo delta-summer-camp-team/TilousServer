@@ -2,7 +2,6 @@ package com.delta.server
 import com.google.gson.Gson
 import com.delta.PlayerID
 import com.delta.Tilous
-import com.google.gson.Gson
 import io.ktor.http.*
 import io.ktor.http.websocket.*
 import io.ktor.serialization.gson.*
@@ -76,6 +75,7 @@ internal class HttpServer(
                 .joinToString("")
         }
         if (gameStarted) {
+
             throw Exception("Игра уже началась!")
         }
 
@@ -83,12 +83,13 @@ internal class HttpServer(
         if (existingPlayer != null) {
             throw Exception("Игрок с ID $id уже зарегистрирован.")
         }
+        val tempPlayer = Player(id, generateRandomPassword())
 
-        if (!addPlayer(Player(id, generateRandomPassword()))) {
+        if (!addPlayer(tempPlayer)) {
             throw Exception("Не удалось добавить игрока '$id' в игру.")
         }
 
-        return Player(id, generateRandomPassword())
+        return tempPlayer
     }
 
 
@@ -173,23 +174,17 @@ internal class HttpServer(
      * @param [checkForGameStart] Если установлен в `true`, но игра не началась, нужно выбросить исключение
      * с сообщением "Game is not started yet".
      */
-    private fun validatePlayer(parameters: Parameters, players: List<Player>, checkForGameStart: Boolean = true): Player {
-        val playerIdToFind = parameters.getPlayerId()
-        val player = players.find { it.id == playerIdToFind }
+    private fun validatePlayer(parameters: Parameters): Player {
 
-        if (player == null) {
-            throw IllegalArgumentException("No such player or credentials are wrong.")
-        }
+        val player = players.find { (it.id == parameters["id"]) && (it.pwd == parameters["pwd"])}
+            ?: throw IllegalArgumentException("No such player or credentials are wrong.")
 
-        if (checkForGameStart) {
+
+        if (!gameStarted) {
+            throw IllegalArgumentException("Game is not started yet.")
         }
 
         return player
-    }
-
-
-    private fun Parameters.getPlayerId(): String {
-        return ("id")
     }
 
 
@@ -201,18 +196,14 @@ internal class HttpServer(
      * Пока можно придумать пароль прямо внутри этой функции.
      */
     private fun validateServersPassword(parameters: Parameters) {
-        val serverPassword = "your_server_password"
+        val serverPassword = "y"
 
-        val inputPassword = parameters.getServerPassword()
+        val inputPassword = parameters["server_pwd"]
 
         if (inputPassword != serverPassword) {
             throw IllegalArgumentException("Invalid server password.")
         }
     }
-    private fun Parameters.getServerPassword(): String {
-        return ("server_pwd")
-    }
-
 
     /**
      * Основная сущность сервера. Принимает запросы вида `server_address/do_something?parameters` и обрабатывает их.
@@ -252,7 +243,7 @@ internal class HttpServer(
              *
              * В самом конце, нужно попытаться начать игру ([tryToStartGame]).
              */
-            post("/login") {
+            get("/login") {
                 try {
                     // Validate the server password
                     validateServersPassword(call.parameters)
@@ -263,12 +254,15 @@ internal class HttpServer(
 
                     // Register a new player
                     val player = registerPlayer(id)
-
+                    if (!addPlayer(player)) {
+                        throw IllegalArgumentException("Too many players")
+                    }
                     // Respond with the newly registered player and password
                     call.respond(HttpStatusCode.OK, mapOf("player" to player, "password" to player.pwd))
 
                     // Attempt to start the game
                     tryToStartGame()
+
                 } catch (e: Exception) {
                     respondException(call, e)
                 }
@@ -283,16 +277,13 @@ internal class HttpServer(
              * Если всё удачно, нужно сделать respondText со статусом OK
              * Иначе используйте [respondException]
              */
-            post("/logout") {
+            get("/logout") {
                 try {
                     // Extract the "id" and "password" parameters
-                    val id = call.parameters["id"]
-                        ?: throw IllegalArgumentException("Missing 'id' parameter.")
-                    val password = call.parameters["password"]
-                        ?: throw IllegalArgumentException("Missing 'password' parameter.")
+                    val player = validatePlayer(call.parameters)
 
                     // Logout the player
-                    val success = logoutPlayer(id, password)
+                    val success = logoutPlayer(player.id, player.pwd)
 
                     // If the player was not found or password didn't match, return an error
                     if (!success) {
@@ -311,13 +302,11 @@ internal class HttpServer(
              * Координаты клетки -- параметры "row" и "col".
              * Возвращает BadRequest если что-то не получилось.
              */
-            post("/placeCell") {
+            get("/placeCell") {
                 try {
 
                     val player = validatePlayer(call.parameters)
-                    if (!gameStarted) {
-                        throw Exception("Игра еще не началась.")
-                    }
+
                     if (player.id != assignedIds.entries.find { it.value == game.currentPlayer }?.key?.id)
                         throw Exception("Теперь не твоя очередь")
 
@@ -346,9 +335,22 @@ internal class HttpServer(
              * Запрос на завершение хода.
              * Возвращает BadRequest если что-то не получилось.
              */
-            post("/endPlayersTurn") {
+            get("/endPlayersTurn") {
                 try {
+                    val player = validatePlayer(call.parameters)
 
+                    if (player.id != assignedIds.entries.find { it.value == game.currentPlayer }?.key?.id)
+                        throw Exception("Теперь не твоя очередь")
+
+                    val result = game.finishPlayersTurn(game.currentPlayer)
+
+                    if (result) {  // If the turn was successfully ended
+                        call.respond(HttpStatusCode.OK, "Turn ended successfully.")
+                    } else if (game.gameIsOver) {  // If the game is already over
+                        call.respond(HttpStatusCode.BadRequest, "Game is already over.")
+                    } else {  // Turn could not be ended
+                        call.respond(HttpStatusCode.BadRequest, "Turn could not be ended.")
+                    }
                 } catch (e: Exception) {
                     respondException(call, e)
                 }
