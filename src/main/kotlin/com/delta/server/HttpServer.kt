@@ -109,6 +109,7 @@ internal class HttpServer(
     private fun addPlayer(player: Player): Boolean {
         if (players.size < 4) {
             players.add(player)
+
             return true
         }
         return false
@@ -211,7 +212,7 @@ internal class HttpServer(
             post("/login") {
                 try {
                     // Validate the server password
-                    validateServersPassword(call.parameters)
+                    //validateServersPassword(call.parameters)
 
                     // Extract the "id" parameter
                     val id = call.parameters["id"]
@@ -244,11 +245,11 @@ internal class HttpServer(
                     // Extract the "id" and "password" parameters
                     val id = call.parameters["id"]
                         ?: throw IllegalArgumentException("Missing 'id' parameter.")
-                    val password = call.parameters["password"]
+                    val pwd = call.parameters["pwd"]
                         ?: throw IllegalArgumentException("Missing 'password' parameter.")
 
                     // Logout the player
-                    val success = logoutPlayer(id, password)
+                    val success = logoutPlayer(id, pwd)
 
                     // If the player was not found or password didn't match, return an error
                     if (!success) {
