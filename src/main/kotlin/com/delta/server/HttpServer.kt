@@ -2,7 +2,6 @@ package com.delta.server
 import com.google.gson.Gson
 import com.delta.PlayerID
 import com.delta.Tilous
-import com.google.gson.Gson
 import io.ktor.http.*
 import io.ktor.http.websocket.*
 import io.ktor.serialization.gson.*
@@ -173,7 +172,7 @@ internal class HttpServer(
      * @param [checkForGameStart] Если установлен в `true`, но игра не началась, нужно выбросить исключение
      * с сообщением "Game is not started yet".
      */
-    private fun validatePlayer(parameters: Parameters, players: List<Player>, checkForGameStart: Boolean = true): Player {
+    private fun validatePlayer(parameters: Parameters, checkForGameStart: Boolean = true): Player {
         val playerIdToFind = parameters.getPlayerId()
         val player = players.find { it.id == playerIdToFind }
 
@@ -331,9 +330,10 @@ internal class HttpServer(
              * Запрос на playerID.
              * Используется для того, чтобы игрок мог узнать очерёдность своего хода
              */
+
             get("/playerID") {
                 try {
-                    val player = validatePlayer(call.parameters)
+                    val player = validatePlayer(parameters = call.parameters)
                     val playerID = assignedIds[player]
                         ?: throw Exception("PlayerID not found for this player.")
                     call.respond(HttpStatusCode.OK, playerID)
@@ -341,7 +341,6 @@ internal class HttpServer(
                     respondException(call,e)
                 }
             }
-
             get("/getWinner") {
                 try {
                     // Retrieve the winner's PlayerID
@@ -369,7 +368,6 @@ internal class HttpServer(
             }
         }
     }
-
     private fun generateRandomId(): String = UUID.randomUUID().toString()
 
     fun start(wait: Boolean) {
