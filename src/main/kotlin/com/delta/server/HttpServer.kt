@@ -86,7 +86,7 @@ internal class HttpServer(
         val tempPlayer = Player(id, generateRandomPassword())
 
         if (!addPlayer(tempPlayer)) {
-            throw Exception("Не удалось добавить игрока '$id' в игру.")
+            throw Exception("Too many players!")
         }
 
         return tempPlayer
@@ -253,9 +253,7 @@ internal class HttpServer(
 
                     // Register a new player
                     val player = registerPlayer(id)
-                    if (!addPlayer(player)) {
-                        throw IllegalArgumentException("Too many players")
-                    }
+
                     // Respond with the newly registered player and password
                     call.respond(HttpStatusCode.OK, mapOf("player" to player, "password" to player.pwd))
 
