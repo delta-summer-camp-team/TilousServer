@@ -14,6 +14,8 @@ import io.ktor.server.routing.*
 import java.util.*
 import kotlin.reflect.KSuspendFunction1
 import kotlin.random.Random
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 
 
@@ -88,7 +90,9 @@ internal class HttpServer(
         if (!addPlayer(tempPlayer)) {
             throw Exception("Too many players!")
         }
-
+        GlobalScope.launch {
+            broadcastGameState()
+        }
         return tempPlayer
     }
 
@@ -138,6 +142,8 @@ internal class HttpServer(
 
             gameStarted = true // Start the game
 
+            // Broadcast the updated game state to all players
+            broadcastGameState()
         }
     }
 
@@ -282,13 +288,13 @@ internal class HttpServer(
                     // Logout the player
                     val success = logoutPlayer(player.id, player.pwd)
 
-                    // If the player was not found or password didn't match, return an error
-                    if (!success) {
+                    if (success) {
+                        call.respond(HttpStatusCode.OK, "Player logged out successfully.")
+                    } else {
+                        // If the player was not found or password didn't match, return an error
                         throw Exception("No player with this ID is registered or password is incorrect.")
                     }
 
-                    // Respond with a success message
-                    call.respond(HttpStatusCode.OK, "Player logged out successfully.")
                 } catch (e: Exception) {
                     respondException(call, e)
                 }
@@ -316,8 +322,14 @@ internal class HttpServer(
 
                     val result = game.placeCell( row, col, game.currentPlayer)
 
-                    if (result) {  // If the tile was successfully placed
+                    if (result) {
+
+                        // Broadcast the updated game state to all players
+                        broadcastGameState()
+
+                        // If the tile was successfully placed
                         call.respond(HttpStatusCode.OK, "Cell placed successfully.")
+
                     } else if (game.gameIsOver) {  // If the game is already over
                         call.respond(HttpStatusCode.BadRequest, "Game is already over.")
                     } else {  // Tile placement was invalid
@@ -341,8 +353,14 @@ internal class HttpServer(
 
                     val result = game.finishPlayersTurn(game.currentPlayer)
 
-                    if (result) {  // If the turn was successfully ended
+                    if (result) {
+
+                        // Broadcast the updated game state to all players
+                        broadcastGameState()
+
+                        // If the turn was successfully ended
                         call.respond(HttpStatusCode.OK, "Turn ended successfully.")
+
                     } else if (game.gameIsOver) {  // If the game is already over
                         call.respond(HttpStatusCode.BadRequest, "Game is already over.")
                     } else {  // Turn could not be ended
@@ -389,6 +407,9 @@ internal class HttpServer(
 
                     // Respond with the winner's Player.id
                     call.respond(HttpStatusCode.OK, winnerPlayer.id)
+
+                    // Broadcast the updated game state to all players
+                    broadcastGameState();
                 } catch (e: Exception) {
                     respondException(call, e)
                 }
