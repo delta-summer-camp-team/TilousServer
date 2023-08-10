@@ -265,9 +265,6 @@ internal class HttpServer(
                     // Respond with the newly registered player and password
                     call.respond(HttpStatusCode.OK, mapOf("player" to player, "password" to player.pwd))
 
-                    // Broadcast the updated game state to all players
-                    broadcastGameState()
-
                     // Attempt to start the game
                     tryToStartGame()
 
@@ -294,9 +291,6 @@ internal class HttpServer(
                     val success = logoutPlayer(player.id, player.pwd)
 
                     if (success) {
-                        // Broadcast the updated game state to all players
-                        broadcastGameState()
-
                         call.respond(HttpStatusCode.OK, "Player logged out successfully.")
                     } else {
                         // If the player was not found or password didn't match, return an error
