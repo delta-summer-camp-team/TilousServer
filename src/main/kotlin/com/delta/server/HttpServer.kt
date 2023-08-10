@@ -195,7 +195,7 @@ internal class HttpServer(
      * Пока можно придумать пароль прямо внутри этой функции.
      */
     private fun validateServersPassword(parameters: Parameters) {
-        val serverPassword = "y"
+        val serverPassword = "Delta!!!"
 
         val inputPassword = parameters["server_pwd"]
 
