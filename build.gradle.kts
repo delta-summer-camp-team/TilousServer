@@ -12,7 +12,9 @@ repositories {
 }
 
 dependencies {
-    implementation("com.github.delta-summer-camp-team:TilousLogic:master-SNAPSHOT")
+//    implementation("com.github.delta-summer-camp-team:TilousLogic:master-SNAPSHOT")
+    implementation("com.github.delta-summer-camp-team:TilousLogic:-SNAPSHOT")
+
 
     val ktorVersion = "2.2.4"
     implementation("io.ktor:ktor-server-core:$ktorVersion")
