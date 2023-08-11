@@ -137,7 +137,10 @@ internal class HttpServer(
         if (players.size == 4) {
             println("started game")
             gameStarted = true // Start the game
+            Thread.sleep(1000)
             println("assignedIDs: $assignedIds")
+            broadcastGameState() // Broadcast the game state to all players
+
         }
     }
 
@@ -265,7 +268,7 @@ internal class HttpServer(
                 } catch (e: Exception) {
                     respondException(call, e)
                 }
-                Thread.sleep(1000)
+
             }
 
 
