@@ -13,8 +13,6 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import java.util.*
 import kotlin.reflect.KSuspendFunction1
-import kotlin.random.Random
-
 
 
 /**
@@ -51,9 +49,11 @@ internal class HttpServer(
         broadcast(Gson().toJson(game))
     }
 
-    private suspend fun respondOk(call: ApplicationCall) {
+    private suspend fun respondOk(call: ApplicationCall, message: String) {
         broadcastGameState()
-        call.respondText("Ok", status = HttpStatusCode.OK)
+
+
+        call.respond(HttpStatusCode.OK, message)
     }
 
     private suspend fun respondException(call: ApplicationCall, e: Exception) {
@@ -135,9 +135,9 @@ internal class HttpServer(
 
         // If there are exactly 4 players, assign PlayerIDs and start the game
         if (players.size == 4) {
-
+            println("started game")
             gameStarted = true // Start the game
-
+            println("assignedIDs: $assignedIds")
         }
     }
 
@@ -147,6 +147,7 @@ internal class HttpServer(
      * в [tryToStartGame].
      */
     fun assignPlayerIds(): Map<Player, PlayerID> {
+        println("assigned IDs")
         // Shuffle the players list for randomness
         val shuffledPlayers = players.shuffled()
 
@@ -195,11 +196,12 @@ internal class HttpServer(
      * Пока можно придумать пароль прямо внутри этой функции.
      */
     private fun validateServersPassword(parameters: Parameters) {
-        val serverPassword = "y"
+        val serverPassword = "Delta!!!"
 
         val inputPassword = parameters["server_pwd"]
 
         if (inputPassword != serverPassword) {
+            println("Invalid server password. Received: $inputPassword, expected: $serverPassword")
             throw IllegalArgumentException("Invalid server password.")
         }
     }
@@ -246,7 +248,7 @@ internal class HttpServer(
                 try {
                     // Validate the server password
                     validateServersPassword(call.parameters)
-
+                    println("Server password validated.")
                     // Extract the "id" parameter
                     val id = call.parameters["id"]
                         ?: throw IllegalArgumentException("Missing 'id' parameter.")
@@ -255,8 +257,8 @@ internal class HttpServer(
                     val player = registerPlayer(id)
 
                     // Respond with the newly registered player and password
-                    call.respond(HttpStatusCode.OK, Gson().toJson(player))
-
+                    respondOk(call, Gson().toJson(player))
+                    println("Player $player has been registered.")
                     // Attempt to start the game
                     tryToStartGame()
 
@@ -288,7 +290,7 @@ internal class HttpServer(
                     }
 
                     // Respond with a success message
-                    call.respond(HttpStatusCode.OK, "Player logged out successfully.")
+                    respondOk(call, "Player logged out successfully.")
                 } catch (e: Exception) {
                     respondException(call, e)
                 }
@@ -314,10 +316,11 @@ internal class HttpServer(
                         ?: throw IllegalArgumentException("Missing or invalid 'col'.")
 
 
-                    val result = game.placeCell( row, col, game.currentPlayer)
+                    val result = game.placeCell(row, col, game.currentPlayer)
 
                     if (result) {  // If the tile was successfully placed
-                        call.respond(HttpStatusCode.OK, "Cell placed successfully.")
+                        respondOk(call, "Cell placed successfully.")
+                        println("Cell placed successfully at ($row, $col) by player $player")
                     } else if (game.gameIsOver) {  // If the game is already over
                         call.respond(HttpStatusCode.BadRequest, "Game is already over.")
                     } else {  // Tile placement was invalid
@@ -342,7 +345,8 @@ internal class HttpServer(
                     val result = game.finishPlayersTurn(game.currentPlayer)
 
                     if (result) {  // If the turn was successfully ended
-                        call.respond(HttpStatusCode.OK, "Turn ended successfully.")
+                        respondOk(call, "Turn ended successfully.")
+                        println("Player $player ended their turn.")
                     } else if (game.gameIsOver) {  // If the game is already over
                         call.respond(HttpStatusCode.BadRequest, "Game is already over.")
                     } else {  // Turn could not be ended
@@ -362,7 +366,8 @@ internal class HttpServer(
                     val player = validatePlayer(call.parameters)
                     val playerID = assignedIds[player]
                         ?: throw Exception("PlayerID not found for this player.")
-                    call.respond(HttpStatusCode.OK, playerID)
+                    respondOk(call, Gson().toJson(playerID))
+                    println("Player $player requested their PlayerID. Responded with $playerID")
                 } catch(e: Exception){
                     respondException(call,e)
                 }
@@ -388,7 +393,7 @@ internal class HttpServer(
                     }
 
                     // Respond with the winner's Player.id
-                    call.respond(HttpStatusCode.OK, winnerPlayer.id)
+                    call.respond(HttpStatusCode.OK, Gson().toJson(winnerPlayer.id))
                 } catch (e: Exception) {
                     respondException(call, e)
                 }
