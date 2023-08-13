@@ -50,6 +50,8 @@ internal class HttpServer(
      * Рассылает всем игрокам текущее состояние игры в формате json.
      */
     private suspend fun broadcastGameState(): Unit {
+        println("BROADCAST:")
+        println(game.toJson())
         broadcast(Gson().toJson(game))
     }
 
@@ -143,6 +145,8 @@ internal class HttpServer(
             gameStarted = true // Start the game
 
             // Broadcast the updated game state to all players
+            Thread.sleep(2000)
+            println("Started!\n ${game.toJson()}")
             broadcastGameState()
         }
     }
@@ -261,7 +265,7 @@ internal class HttpServer(
                     val player = registerPlayer(id)
 
                     // Respond with the newly registered player and password
-                    call.respond(HttpStatusCode.OK, mapOf("player" to player, "password" to player.pwd))
+                    call.respond(HttpStatusCode.OK, Gson().toJson(player))
 
                     // Attempt to start the game
                     tryToStartGame()
@@ -269,7 +273,7 @@ internal class HttpServer(
                 } catch (e: Exception) {
                     respondException(call, e)
                 }
-                Thread.sleep(1000)
+
             }
 
 
@@ -307,7 +311,6 @@ internal class HttpServer(
              */
             get("/placeCell") {
                 try {
-
                     val player = validatePlayer(call.parameters)
 
                     if (player.id != assignedIds.entries.find { it.value == game.currentPlayer }?.key?.id)
@@ -354,7 +357,6 @@ internal class HttpServer(
                     val result = game.finishPlayersTurn(game.currentPlayer)
 
                     if (result) {
-
                         // Broadcast the updated game state to all players
                         broadcastGameState()
 
@@ -409,7 +411,7 @@ internal class HttpServer(
                     call.respond(HttpStatusCode.OK, winnerPlayer.id)
 
                     // Broadcast the updated game state to all players
-                    broadcastGameState();
+                    broadcastGameState()
                 } catch (e: Exception) {
                     respondException(call, e)
                 }
